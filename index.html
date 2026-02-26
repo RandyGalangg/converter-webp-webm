@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONVRT — WebP & WebM Converter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #1e1e2e;
+    --accent: #00e5ff;
+    --accent2: #ff2d78;
+    --green: #00ff88;
+    --text: #e8e8f0;
+    --muted: #4a4a6a;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  html { font-size: 16px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-size: clamp(52px, 10vw, 96px);
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+  .tagline {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    align-self: flex-end;
+    padding-bottom: 8px;
+  }
+
+  .subtitle {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 40px;
+    letter-spacing: 1px;
+  }
+  .subtitle span { color: var(--accent); }
+
+  /* FORMAT SELECTOR */
+  .format-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+    align-items: center;
+  }
+  .format-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+  .format-btn {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2px;
+    padding: 8px 24px;
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+  .format-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .format-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+  }
+  .format-btn.active.webm {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: #fff;
+  }
+
+  /* QUALITY SETTINGS */
+  .settings-row {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .setting-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .setting-group label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .setting-group input[type=range] {
+    -webkit-appearance: none;
+    width: 120px;
+    height: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  .setting-group input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    cursor: pointer;
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  }
+  .setting-val {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    min-width: 32px;
+  }
+  .setting-group select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 4px 8px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  /* DROP ZONE */
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    padding: 48px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    margin-bottom: 32px;
+    background: rgba(0,229,255,0.01);
+  }
+  .dropzone::before, .dropzone::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--accent);
+    border-style: solid;
+  }
+  .dropzone::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+  .dropzone::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.04);
+  }
+  .dropzone.drag-over { transform: scale(1.005); }
+  .drop-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    opacity: 0.6;
+  }
+  .drop-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .drop-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .drop-sub span { color: var(--accent); }
+  #fileInput { display: none; }
+
+  /* FILE LIST */
+  .file-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+
+  .file-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .file-info { min-width: 0; }
+  .file-name {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .file-status {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .status-waiting { color: var(--muted); }
+  .status-processing { color: var(--accent); animation: blink 1s infinite; }
+  .status-done { color: var(--green); }
+  .status-error { color: var(--accent2); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .progress-bar-wrap {
+    width: 80px;
+    height: 3px;
+    background: var(--border);
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+  .progress-bar-fill.done { background: var(--green); }
+
+  .btn-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .btn-remove:hover { color: var(--accent2); }
+
+  /* ACTIONS */
+  .actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+  .btn {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 3px;
+    padding: 12px 32px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+    text-transform: uppercase;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+  .btn-primary:hover { background: #33eeff; transform: translateY(-1px); }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1.5px solid var(--border);
+    clip-path: none;
+    font-size: 13px;
+    padding: 10px 20px;
+  }
+  .btn-secondary:hover { border-color: var(--muted); color: var(--text); }
+
+  .btn-dl {
+    background: var(--green);
+    color: #000;
+  }
+  .btn-dl:hover { background: #33ffaa; transform: translateY(-1px); }
+
+  /* STATS */
+  .stats-bar {
+    display: flex;
+    gap: 32px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .stat { }
+  .stat-val {
+    font-family: var(--font-display);
+    font-size: 36px;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .stat-val.c { color: var(--accent); }
+  .stat-val.g { color: var(--green); }
+  .stat-val.r { color: var(--accent2); }
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  .notice {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+    line-height: 1.7;
+  }
+  .notice strong { color: var(--accent2); }
+
+  /* WEBM VIDEO NOTICE */
+  .webm-note {
+    background: rgba(255,45,120,0.07);
+    border: 1px solid rgba(255,45,120,0.2);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 0.5px;
+    line-height: 1.8;
+    display: none;
+  }
+  .webm-note.visible { display: block; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">CONVRT</div>
+    <div class="tagline">Multi-File Converter</div>
+  </header>
+  <div class="subtitle">Convert <span>anything</span> → WebP / WebM &nbsp;|&nbsp; No limits &nbsp;|&nbsp; 100% browser-based</div>
+
+  <!-- Format Selector -->
+  <div class="format-bar">
+    <span class="format-label">Output →</span>
+    <button class="format-btn active" id="btnWebp" onclick="setFormat('webp')">WEBP</button>
+    <button class="format-btn webm" id="btnWebm" onclick="setFormat('webm')">WEBM</button>
+  </div>
+
+  <!-- WebM Notice -->
+  <div class="webm-note" id="webmNote">
+    ⚠ WebM output untuk <strong>gambar</strong> akan dibuat sebagai WebP lalu di-encode ulang. Untuk <strong>video</strong> (mp4, avi, mov, mkv, dll), konversi langsung ke WebM menggunakan browser canvas — kualitas tergantung kemampuan browser. &nbsp;|&nbsp; Format video: proses frame-by-frame via canvas (mungkin lambat untuk file besar).
+  </div>
+
+  <!-- Quality Settings -->
+  <div class="settings-row">
+    <div class="setting-group">
+      <label>Kualitas</label>
+      <input type="range" id="qualitySlider" min="0.1" max="1.0" step="0.05" value="0.85" oninput="updateQuality()">
+      <span class="setting-val" id="qualityVal">85%</span>
+    </div>
+    <div class="setting-group" id="resizeGroup">
+      <label>Resize</label>
+      <select id="resizeOpt">
+        <option value="none">— Original</option>
+        <option value="1920">Max 1920px</option>
+        <option value="1280">Max 1280px</option>
+        <option value="800">Max 800px</option>
+        <option value="400">Max 400px</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+    <span class="drop-icon">⬡</span>
+    <div class="drop-title">DROP FILES HERE</div>
+    <div class="drop-sub">atau klik untuk pilih &nbsp;·&nbsp; <span>semua format didukung</span> &nbsp;·&nbsp; banyak file sekaligus</div>
+    <input type="file" id="fileInput" multiple accept="*/*">
+  </div>
+
+  <!-- File List -->
+  <div class="file-list" id="fileList"></div>
+
+  <!-- Actions -->
+  <div class="actions" id="actionsRow" style="display:none">
+    <button class="btn btn-primary" id="btnConvert" onclick="convertAll()">CONVERT ALL</button>
+    <button class="btn btn-dl" id="btnDownloadAll" onclick="downloadAll()" style="display:none">DOWNLOAD ALL</button>
+    <button class="btn btn-secondary" onclick="clearAll()">CLEAR</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat"><div class="stat-val c" id="statTotal">0</div><div class="stat-label">Total Files</div></div>
+    <div class="stat"><div class="stat-val g" id="statDone">0</div><div class="stat-label">Converted</div></div>
+    <div class="stat"><div class="stat-val r" id="statErr">0</div><div class="stat-label">Error</div></div>
+    <div class="stat"><div class="stat-val g" id="statSaved">—</div><div class="stat-label">Size Saved</div></div>
+  </div>
+
+  <div class="notice">
+    ✦ Semua proses terjadi <strong>di browser</strong> — file tidak diunggah ke server mana pun.<br>
+    ✦ <strong>WebP</strong>: gambar (jpg, png, gif, bmp, tiff, svg, avif, heic*, dll) · <strong>WebM</strong>: video (mp4, mov, avi, mkv, webm*, dll) + gambar juga didukung
+  </div>
+</div>
+
+<script>
+let format = 'webp';
+let files = [];
+let results = [];
+let totalOriginalSize = 0;
+let totalOutputSize = 0;
+
+function setFormat(f) {
+  format = f;
+  document.getElementById('btnWebp').className = 'format-btn' + (f === 'webp' ? ' active' : '');
+  document.getElementById('btnWebm').className = 'format-btn webm' + (f === 'webm' ? ' active' : '');
+  document.getElementById('webmNote').className = 'webm-note' + (f === 'webm' ? ' visible' : '');
+}
+
+function updateQuality() {
+  const v = parseFloat(document.getElementById('qualitySlider').value);
+  document.getElementById('qualityVal').textContent = Math.round(v * 100) + '%';
+}
+
+// Drag & drop
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  addFiles(Array.from(e.dataTransfer.files));
+});
+document.getElementById('fileInput').addEventListener('change', e => {
+  addFiles(Array.from(e.target.files));
+  e.target.value = '';
+});
+
+function addFiles(newFiles) {
+  newFiles.forEach(f => {
+    const id = Date.now() + Math.random();
+    files.push({ id, file: f, status: 'waiting', blob: null, progress: 0 });
+  });
+  renderList();
+  document.getElementById('actionsRow').style.display = files.length ? 'flex' : 'none';
+  document.getElementById('statsBar').style.display = files.length ? 'flex' : 'none';
+  updateStats();
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1024 / 1024).toFixed(2) + ' MB';
+}
+
+function renderList() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  files.forEach(f => {
+    const el = document.createElement('div');
+    el.className = 'file-item';
+    el.id = 'item-' + f.id;
+
+    let statusHTML = '';
+    if (f.status === 'waiting') statusHTML = `<span class="file-status status-waiting">WAITING</span>`;
+    else if (f.status === 'processing') statusHTML = `<span class="file-status status-processing">PROCESSING</span>`;
+    else if (f.status === 'done') statusHTML = `<span class="file-status status-done">✓ DONE</span>`;
+    else if (f.status === 'error') statusHTML = `<span class="file-status status-error">✗ ERROR</span>`;
+
+    el.innerHTML = `
+      <div class="file-info">
+        <div class="file-name">${f.file.name}</div>
+        <div class="file-meta">${f.file.type || 'unknown'} · ${formatBytes(f.file.size)}</div>
+      </div>
+      <div>
+        ${statusHTML}
+        ${f.status === 'done' ? `<div style="margin-top:4px"><div class="progress-bar-wrap"><div class="progress-bar-fill done" style="width:100%"></div></div></div>` : ''}
+        ${f.status === 'processing' ? `<div style="margin-top:4px"><div class="progress-bar-wrap"><div class="progress-bar-fill" id="pb-${f.id}" style="width:${f.progress}%"></div></div></div>` : ''}
+      </div>
+      ${f.status === 'done' ? `<button class="btn btn-secondary" style="font-size:11px;padding:6px 12px;clip-path:none" onclick="downloadOne('${f.id}')">DL</button>` : `<button class="btn-remove" onclick="removeFile('${f.id}')">✕</button>`}
+    `;
+    list.appendChild(el);
+  });
+}
+
+function removeFile(id) {
+  files = files.filter(f => String(f.id) !== String(id));
+  results = results.filter(r => String(r.id) !== String(id));
+  renderList();
+  document.getElementById('actionsRow').style.display = files.length ? 'flex' : 'none';
+  document.getElementById('statsBar').style.display = files.length ? 'flex' : 'none';
+  updateStats();
+}
+
+function clearAll() {
+  files = [];
+  results = [];
+  totalOriginalSize = 0;
+  totalOutputSize = 0;
+  renderList();
+  document.getElementById('actionsRow').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
+  document.getElementById('btnDownloadAll').style.display = 'none';
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = files.length;
+  const done = files.filter(f => f.status === 'done').length;
+  const err = files.filter(f => f.status === 'error').length;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statErr').textContent = err;
+
+  const origSize = results.reduce((a, r) => a + r.origSize, 0);
+  const outSize = results.reduce((a, r) => a + r.outSize, 0);
+  const saved = origSize - outSize;
+  document.getElementById('statSaved').textContent = saved > 0 ? '-' + formatBytes(saved) : (origSize > 0 ? '+' + formatBytes(-saved) : '—');
+}
+
+// --- CONVERSION CORE ---
+
+function imageToCanvas(file, maxSize) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (maxSize && maxSize !== 'none') {
+        const ms = parseInt(maxSize);
+        if (w > ms || h > ms) {
+          if (w >= h) { h = Math.round(h * ms / w); w = ms; }
+          else { w = Math.round(w * ms / h); h = ms; }
+        }
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
+    img.src = url;
+  });
+}
+
+async function convertImageToWebP(file, quality, maxSize) {
+  const canvas = await imageToCanvas(file, maxSize);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas toBlob failed'));
+    }, 'image/webp', quality);
+  });
+}
+
+async function convertVideoToWebM(file, quality) {
+  // Use MediaRecorder to capture from video element
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+
+    video.onloadedmetadata = () => {
+      const w = video.videoWidth || 640;
+      const h = video.videoHeight || 480;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+
+      const stream = canvas.captureStream(30);
+      let mimeType = 'video/webm;codecs=vp8';
+      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mimeType = 'video/webm;codecs=vp9';
+
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: Math.round(quality * 4000000) });
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        URL.revokeObjectURL(url);
+        resolve(blob);
+      };
+
+      recorder.start();
+      video.currentTime = 0;
+
+      const drawFrame = () => {
+        if (video.ended || video.paused) {
+          recorder.stop();
+          return;
+        }
+        ctx.drawImage(video, 0, 0, w, h);
+        requestAnimationFrame(drawFrame);
+      };
+
+      video.onplay = drawFrame;
+      video.onended = () => recorder.stop();
+      video.play().catch(reject);
+    };
+    video.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Cannot load video')); };
+  });
+}
+
+async function convertImageToWebM(file, quality, maxSize) {
+  // Image → animate single frame as WebM
+  const canvas = await imageToCanvas(file, maxSize);
+  const stream = canvas.captureStream(1);
+  let mimeType = 'video/webm;codecs=vp8';
+  if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mimeType = 'video/webm;codecs=vp9';
+
+  return new Promise((resolve, reject) => {
+    if (typeof MediaRecorder === 'undefined') {
+      reject(new Error('MediaRecorder not supported'));
+      return;
+    }
+    const recorder = new MediaRecorder(stream, { mimeType });
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+    recorder.start();
+    setTimeout(() => recorder.stop(), 500);
+  });
+}
+
+function isVideo(file) {
+  return file.type.startsWith('video/') ||
+    /\.(mp4|mov|avi|mkv|flv|wmv|m4v|3gp|ogv|ts|mts)$/i.test(file.name);
+}
+
+function isImage(file) {
+  return file.type.startsWith('image/') ||
+    /\.(jpe?g|png|gif|bmp|tiff?|svg|avif|heic|heif|ico|webp|raw|cr2|nef|arw)$/i.test(file.name);
+}
+
+async function convertSingle(fileObj, quality, maxSize) {
+  const { file } = fileObj;
+
+  if (format === 'webp') {
+    if (!isImage(file)) throw new Error('File bukan gambar. WebP hanya untuk gambar.');
+    return await convertImageToWebP(file, quality, maxSize);
+  } else {
+    // WebM
+    if (isVideo(file)) {
+      return await convertVideoToWebM(file, quality);
+    } else if (isImage(file)) {
+      return await convertImageToWebM(file, quality, maxSize);
+    } else {
+      throw new Error('Format tidak dikenali untuk WebM');
+    }
+  }
+}
+
+async function convertAll() {
+  const quality = parseFloat(document.getElementById('qualitySlider').value);
+  const maxSize = document.getElementById('resizeOpt').value;
+  const pending = files.filter(f => f.status === 'waiting' || f.status === 'error');
+
+  document.getElementById('btnConvert').disabled = true;
+  document.getElementById('btnDownloadAll').style.display = 'none';
+
+  for (const fileObj of pending) {
+    fileObj.status = 'processing';
+    fileObj.progress = 10;
+    renderList();
+
+    try {
+      const blob = await convertSingle(fileObj, quality, maxSize);
+      fileObj.blob = blob;
+      fileObj.status = 'done';
+      fileObj.progress = 100;
+
+      // Track sizes
+      const existing = results.find(r => r.id === fileObj.id);
+      if (existing) {
+        existing.outSize = blob.size;
+      } else {
+        results.push({ id: fileObj.id, origSize: fileObj.file.size, outSize: blob.size });
+      }
+    } catch (e) {
+      fileObj.status = 'error';
+      fileObj.errorMsg = e.message;
+    }
+
+    renderList();
+    updateStats();
+  }
+
+  document.getElementById('btnConvert').disabled = false;
+
+  const doneCnt = files.filter(f => f.status === 'done').length;
+  if (doneCnt > 0) document.getElementById('btnDownloadAll').style.display = 'block';
+}
+
+function getOutputName(file) {
+  const base = file.name.replace(/\.[^.]+$/, '');
+  return base + '.' + format;
+}
+
+function downloadOne(id) {
+  const f = files.find(f => String(f.id) === String(id));
+  if (!f || !f.blob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(f.blob);
+  a.download = getOutputName(f.file);
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+async function downloadAll() {
+  const done = files.filter(f => f.status === 'done' && f.blob);
+  if (!done.length) return;
+
+  if (done.length === 1) {
+    downloadOne(done[0].id);
+    return;
+  }
+
+  // Use JSZip if available, otherwise download one by one
+  try {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    document.head.appendChild(script);
+    await new Promise(r => { script.onload = r; script.onerror = r; });
+
+    if (typeof JSZip !== 'undefined') {
+      const zip = new JSZip();
+      done.forEach(f => zip.file(getOutputName(f.file), f.blob));
+      const content = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(content);
+      a.download = 'converted_' + format + '.zip';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } else {
+      // fallback: one by one
+      done.forEach(f => downloadOne(f.id));
+    }
+  } catch {
+    done.forEach(f => downloadOne(f.id));
+  }
+}
+</script>
+</body>
+</html>
